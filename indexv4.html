@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ứng dụng hỗ trợ chi đầu tư KBNN</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --primary: #0f4c81;
+      --primary-hover: #09355c;
+      --border: #d9e1ec;
+      --text: #1e293b;
+      --muted: #64748b;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --ok: #047857;
+    }
+    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 1680px; margin: 0 auto; }
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    h1 { margin: 0; font-size: 22px; color: var(--primary); }
+    .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .nav-tabs { display: flex; gap: 8px; }
+    .tab-btn {
+      background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1;
+      padding: 9px 16px; border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 12px; }
+    .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155; }
+    input[type="file"], input[type="date"], input[type="text"], select {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: 6px; font-size: 13px; background: #fff;
+    }
+    .options-row {
+      display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px;
+      padding-top: 12px; border-top: 1px dashed #e2e8f0; font-size: 13px; align-items: center;
+    }
+    .options-row label { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; margin: 0; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+    button.btn {
+      background: var(--primary); color: #fff; border: none; padding: 9px 16px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    button.btn:hover { background: var(--primary-hover); }
+    button.btn.secondary { background: #475569; }
+    button.btn.secondary:hover { background: #334155; }
+    button.btn.success { background: var(--ok); }
+    button.btn.success:hover { background: #065f46; }
+    button.btn.warn { background: #b45309; }
+    button.btn.warn:hover { background: #92400e; }
+    button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+    .kpi .title { font-size: 12px; color: var(--muted); }
+    .kpi .val { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .kpi.m3 .val { color: var(--ok); }
+    .kpi.m6 .val { color: var(--warn); }
+    .kpi.m9 .val { color: var(--danger); }
+    .filter-bar {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;
+    }
+    .table-wrap { overflow: auto; max-height: 580px; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #eef2f6; z-index: 1; font-weight: 700; white-space: nowrap; }
+    td.nowrap { white-space: nowrap; }
+    td.proj-name {
+      min-width: 150px; max-width: 220px;
+      white-space: normal; word-break: break-word; line-height: 1.35;
+    }
+    td.hm-tm {
+      min-width: 150px; max-width: 230px;
+      white-space: normal; word-break: break-word; line-height: 1.35;
+    }
+    .empty-tag { color: #b45309; font-style: italic; font-weight: 600; }
+    .badge-9251 {
+      display: inline-block; background: #fef3c7; color: #92400e;
+      border: 1px solid #fcd34d; border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 600;
+    }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .status { font-size: 13px; color: var(--primary); font-weight: 600; }
+    .log-box {
+      margin-top: 10px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 6px; font-size: 12.5px; color: #334155; line-height: 1.5;
+    }
+    .guide-box {
+      background: #f0f7ff; border: 1px solid #bae6fd; border-radius: 8px;
+      padding: 10px 14px; margin: 8px 0 12px; font-size: 13px; color: #0c4a6e;
+    }
+    .guide-box ul { margin: 4px 0 0 18px; padding: 0; line-height: 1.55; }
+    .merge-banner {
+      background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px;
+      padding: 14px 16px; margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header-bar">
+    <div>
+      <h1>Ứng dụng hỗ trợ chi đầu tư KBNN</h1>
+      <div class="sub">Chạy 100% trên trình duyệt (Online hoặc Offline trên Win 10 không cần Admin — dữ liệu không gửi lên máy chủ).</div>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tabBtnAnalysis" onclick="switchTab('analysis')">Phân tích dư tạm ứng</button>
+      <button class="tab-btn" id="tabBtnTools" onclick="switchTab('tools')">Công cụ xử lý file ĐKTB</button>
+    </div>
+  </div>
+
+  <!-- TAB 1: PHÂN TÍCH DƯ TẠM ỨNG -->
+  <div id="tabAnalysis">
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label>1. Chọn file Excel đã xử lý (.xlsx / .xls)</label>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" />
+        </div>
+        <div>
+          <label>2. Ngày đối chiếu (mốc tính tuổi nợ)</label>
+          <input type="date" id="refDate" />
+        </div>
+        <div>
+          <label>3. Từ khóa nhận diện ở cột Y</label>
+          <input type="text" id="advKeyword" value="Tạm ứng" />
+        </div>
+        <div>
+          <label>4. Chế độ hiển thị</label>
+          <select id="viewMode">
+            <option value="item">Từng bút toán tạm ứng (chi tiết từng món + ngày)</option>
+            <option value="group">Gộp theo nhóm (Mã dự án + HM-TM + Năm KHV + NDKT + NV)</option>
+          </select>
+        </div>
+        <div>
+          <label>5. Dòng bắt đầu dữ liệu</label>
+          <input type="text" id="startRow" value="2" />
+        </div>
+      </div>
+
+      <div class="options-row">
+        <strong>Khóa khớp:</strong>
+        <label><input type="checkbox" id="k_G" checked /> Mã dự án (G)</label>
+        <label><input type="checkbox" id="k_I" checked /> Hạng mục-Tiết mục (I)</label>
+        <label><input type="checkbox" id="k_X" checked /> Năm KHV (X)</label>
+        <label><input type="checkbox" id="k_L" checked /> Mã NDKT (L)</label>
+        <label><input type="checkbox" id="k_T" checked /> Nguồn vốn (T)</label>
+        <label><input type="checkbox" id="caseSensitiveKw" /> Khớp đúng chữ hoa/thường từ khóa cột Y</label>
+        <label style="color:#92400e; font-weight:600;">
+          <input type="checkbox" id="mode9251Group" checked /> NDKT 9251: gộp dư theo nhóm &amp; gắn cảnh báo rà soát ngày hoàn
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="btnRun">Chạy phân tích</button>
+        <button class="btn success" id="btnExport" disabled>Xuất kết quả ra Excel (.xlsx)</button>
+        <button class="btn secondary" id="btnReset">Xóa bộ lọc</button>
+        <span class="status" id="statusText"></span>
+      </div>
+    </div>
+
+    <div class="summary" id="summaryCards" style="display:none;">
+      <div class="kpi">
+        <div class="title">Tổng dư tạm ứng chưa thu hồi</div>
+        <div class="val" id="sumAll">0</div>
+      </div>
+      <div class="kpi">
+        <div class="title">Dưới 3 tháng (&lt; 3T)</div>
+        <div class="val" id="sumUnder3">0</div>
+      </div>
+      <div class="kpi m3">
+        <div class="title">Từ 3 tháng đến dưới 6 tháng</div>
+        <div class="val" id="sum3to6">0</div>
+      </div>
+      <div class="kpi m6">
+        <div class="title">Từ 6 tháng đến dưới 9 tháng</div>
+        <div class="val" id="sum6to9">0</div>
+      </div>
+      <div class="kpi m9">
+        <div class="title">Từ 9 tháng trở lên (&ge; 9T)</div>
+        <div class="val" id="sumOver9">0</div>
+      </div>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+        <strong id="tableTitle">Bảng chi tiết tạm ứng</strong>
+        <span id="filteredCount" style="font-size:12.5px; color:#475569; font-weight:600;"></span>
+      </div>
+
+      <div class="filter-bar">
+        <div>
+          <label>Lọc Hạng mục-Tiết mục (I)</label>
+          <input type="text" id="fltHmTm" placeholder="Nhập mã/tên HM-TM hoặc 'trống'..." />
+        </div>
+        <div>
+          <label>Lọc Mã NDKT (L)</label>
+          <input type="text" id="fltNdkt" placeholder="Ví dụ: 9251, 6051..." />
+        </div>
+        <div>
+          <label>Tìm nhanh (Mã dự án, Tên dự án, Năm KHV, Ngày...)</label>
+          <input type="text" id="searchBox" placeholder="Từ khóa bất kỳ..." />
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="resultTable">
+          <thead>
+            <tr>
+              <th>Mã dự án (G)</th>
+              <th>Tên dự án (H)</th>
+              <th>Hạng mục-Tiết mục (I)</th>
+              <th>Năm KHV (X)</th>
+              <th>Mã NDKT (L)</th>
+              <th>Nguồn vốn (T)</th>
+              <th>Ngày bắt đầu tạm ứng</th>
+              <th class="num">Tạm ứng C301</th>
+              <th class="num">Thu hồi + Nộp trả</th>
+              <th class="num">Dư chưa thu hồi</th>
+              <th class="num">&lt; 3 tháng</th>
+              <th class="num">3 – &lt; 6 tháng</th>
+              <th class="num">6 – &lt; 9 tháng</th>
+              <th class="num">&ge; 9 tháng</th>
+              <th class="num">Số tháng</th>
+              <th>Ghi chú / Đối chiếu</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: CÔNG CỤ XỬ LÝ FILE ĐKTB -->
+  <div id="tabTools" style="display:none;">
+    <div class="tool-grid">
+      <!-- CÔNG CỤ 1: XỬ LÝ LIỆT KÊ ĐTKB -->
+      <div class="card">
+        <h3 style="margin:0 0 6px; color:var(--primary); font-size:16px;">Công cụ 1: Xử lý liệt kê ĐTKB</h3>
+        <div class="guide-box">
+          <strong>Hướng dẫn lấy dữ liệu trên hệ thống:</strong>
+          <ul>
+            <li>Vào mục <strong>Sổ sách/Báo cáo</strong></li>
+            <li>Chọn <strong>9.6. Sổ liệt kê chứng từ thanh toán vốn đầu tư</strong></li>
+            <li>Chọn <strong>Trạng thái: Đã phê duyệt</strong></li>
+            <li>Các thông số khác tùy ý</li>
+            <li>Sau đó ấn <strong>Tổng hợp</strong></li>
+            <li>Chọn <strong>xuất file excel</strong> rồi gửi lên đây nhé</li>
+          </ul>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Chọn file thô Liệt kê ĐTKB (.xlsx / .xls)</label>
+          <input type="file" id="rawFileDTKB" accept=".xlsx,.xls,.xlsm" />
+        </div>
+        <div class="actions">
+          <button class="btn success" id="btnProcDTKB">Xử lý &amp; Tải file ĐTKB đã tách sheet (.xlsx)</button>
+          <button class="btn" id="btnLoadDTKBToTab1" disabled>Nạp ngay vào Tab Phân tích</button>
+        </div>
+        <div class="log-box" id="logDTKB">Chưa có file được xử lý. (Cột số tiền trên file tải về sẽ được định dạng dấu phân cách hàng nghìn <code>#,##0</code>).</div>
+      </div>
+
+      <!-- CÔNG CỤ 2: XỬ LÝ FILE TRA CỨU CHỨNG TỪ -->
+      <div class="card">
+        <h3 style="margin:0 0 6px; color:var(--primary); font-size:16px;">Công cụ 2: Xử lý file tra cứu chứng từ</h3>
+        <div class="guide-box">
+          <strong>Hướng dẫn lấy dữ liệu trên hệ thống:</strong>
+          <ul>
+            <li>Vào mục <strong>Yêu cầu thanh toán</strong></li>
+            <li>Chọn <strong>8.11. Tra cứu chứng từ</strong></li>
+            <li>Chọn <strong>Loại chứng từ (C301, C302, C205a, Chứng từ điều chỉnh)</strong></li>
+            <li>Chọn <strong>Trạng thái: Đã phê duyệt</strong></li>
+            <li>Các thông số khác tùy ý</li>
+            <li>Sau đó ấn <strong>Tìm kiếm</strong> rồi chọn <strong>In danh sách</strong></li>
+            <li>Chọn <strong>xuất file excel</strong> rồi gửi lên đây nhé</li>
+          </ul>
+        </div>
+        <div class="grid" style="margin-top:10px;">
+          <div>
+            <label>Chọn nhiều file tra cứu chứng từ (.xlsx / .xls)</label>
+            <input type="file" id="rawFilesTraCuu" accept=".xlsx,.xls,.xlsm" multiple />
+          </div>
+          <div>
+            <label>Cấu trúc xử lý áp dụng</label>
+            <select id="traCuuProfile">
+              <option value="c302_v20">Mẫu chuẩn C302 / Tra cứu chứng từ (V20)</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn success" id="btnProcTraCuu">Xử lý tất cả file đã chọn &amp; Tải về (.xlsx)</button>
+        </div>
+        <div class="log-box" id="logTraCuu">Hỗ trợ chọn cùng lúc nhiều file Excel tra cứu chứng từ (C301, C302, C205a, Điều chỉnh...) để xử lý hàng loạt.</div>
+      </div>
+    </div>
+
+    <!-- BỔ SUNG DỮ LIỆU TỪ FILE TRA CỨU CHỨNG TỪ TƯƠNG ỨNG VÀO FILE LIỆT KÊ ĐTKB (4 SHEET) -->
+    <div class="merge-banner">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <strong style="color:#065f46; font-size:15px;">Bổ sung thông tin từ file tra cứu chứng từ tương ứng vào file liệt kê ĐTKB (4 sheet: C301, C302, C205a, DC)</strong>
+          <div style="font-size:12.5px; color:#047857; margin-top:4px;">
+            File liệt kê có 4 sheet tương ứng với file chứng từ: tại sheet <strong>C301</strong> và <strong>C302</strong> của file liệt kê, khi thiếu dữ liệu ở <strong>Cột I</strong>, hệ thống đối chiếu mã trùng giữa <strong>Cột C (sheet C301, C302 file liệt kê)</strong> với <strong>Cột G (file tra cứu C301, C302 tương ứng)</strong> để đưa thông tin từ <strong>Cột J (file tra cứu C301, C302)</strong> vào <strong>Cột I</strong> sheet tương ứng trong file liệt kê.
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn warn" id="btnEnrichAndDownload" disabled>Bổ sung &amp; Xuất file ĐTKB (.xlsx)</button>
+          <button class="btn" id="btnEnrichAndLoadTab1" disabled>Bổ sung &amp; Nạp vào Phân tích</button>
+          <button class="btn secondary" id="btnClearTraCuuCache">Xóa bộ nhớ tra cứu</button>
+        </div>
+      </div>
+      <div class="log-box" id="logEnrich" style="margin-top:10px; background:#ffffff;">
+        Hệ thống tự động lưu dữ liệu tra cứu chứng từ theo từng loại sheet tương ứng (<code>C301</code>, <code>C302</code>, <code>C205a</code>, <code>DC</code>). Hãy xử lý <strong>Công cụ 1 (Liệt kê ĐTKB)</strong> và <strong>Công cụ 2 (Tra cứu chứng từ)</strong> rồi bấm bổ sung.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById("refDate").value = new Date().toISOString().slice(0, 10);
+
+  let loadedWorkbook = null;
+  let lastResultRows = [];
+  let processedWbDTKB = null;
+  let processedTraCuuWorkbooks = [];
+
+  function switchTab(tab) {
+    document.getElementById("tabAnalysis").style.display = tab === "analysis" ? "block" : "none";
+    document.getElementById("tabTools").style.display = tab === "tools" ? "block" : "none";
+    document.getElementById("tabBtnAnalysis").classList.toggle("active", tab === "analysis");
+    document.getElementById("tabBtnTools").classList.toggle("active", tab === "tools");
+  }
+
+  function colToIdx(colLetter) {
+    const s = (colLetter || "").trim().toUpperCase().replace(/[^A-Z]/g, "");
+    let idx = 0;
+    for (let i = 0; i < s.length; i++) {
+      idx = idx * 26 + (s.charCodeAt(i) - 64);
+    }
+    return Math.max(0, idx - 1);
+  }
+
+  function cleanText(v) {
+    if (v === null || v === undefined) return "";
+    return String(v)
+      .replace(/['’‘`"]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function parseNum(v) {
+    if (typeof v === "number") return isFinite(v) ? v : 0;
+    if (v === null || v === undefined || v === "") return 0;
+    const clean = String(v).replace(/\s+/g, "").replace(/,/g, "");
+    const n = parseFloat(clean);
+    return isFinite(n) ? n : 0;
+  }
+
+  function parseDateVal(v) {
+    if (!v) return null;
+    if (v instanceof Date && !isNaN(v)) return v;
+    if (typeof v === "number") {
+      const utcDays = Math.floor(v - 25569);
+      const d = new Date(utcDays * 86400 * 1000);
+      return isNaN(d) ? null : d;
+    }
+    const str = String(v).trim();
+    const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m1) {
+      const d = new Date(Number(m1[3]), Number(m1[2]) - 1, Number(m1[1]));
+      return isNaN(d) ? null : d;
+    }
+    const d2 = new Date(str);
+    return isNaN(d2) ? null : d2;
+  }
+
+  function fmtDateVN(d) {
+    if (!d || !(d instanceof Date) || isNaN(d)) return "";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  function fmtMoney(n) {
+    return Math.round(n).toLocaleString("vi-VN");
+  }
+
+  function monthsDiff(startD, endD) {
+    if (!startD || !endD) return 0;
+    const days = (endD - startD) / (1000 * 60 * 60 * 24);
+    return days / 30.4375;
+  }
+
+  function escHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderHmTm(val) {
+    const v = cleanText(val);
+    if (!v) return `<span class="empty-tag">(Trống HM-TM)</span>`;
+    return escHtml(v);
+  }
+
+  // ==================== BỘ XỬ LÝ VBA -> JS ====================
+  function sheetToMatrixWithBold(ws) {
+    const ref = ws["!ref"];
+    if (!ref) return [];
+    const range = XLSX.utils.decode_range(ref);
+    const merges = ws["!merges"] || [];
+    const matrix = [];
+
+    for (let r = 0; r <= range.e.r; r++) {
+      const row = [];
+      for (let c = 0; c <= range.e.c; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        const cell = ws[addr];
+        let val = cell ? (cell.v !== undefined ? cell.v : "") : "";
+        let bold = false;
+        if (cell && cell.s && cell.s.font && cell.s.font.bold) {
+          bold = true;
+        }
+        row.push({ v: val, bold });
+      }
+      matrix.push(row);
+    }
+
+    for (const m of merges) {
+      const topBold = matrix[m.s.r] && matrix[m.s.r][m.s.c] ? matrix[m.s.r][m.s.c].bold : false;
+      for (let r = m.s.r; r <= m.e.r; r++) {
+        for (let c = m.s.c; c <= m.e.c; c++) {
+          if (r === m.s.r && c === m.s.c) continue;
+          if (matrix[r] && matrix[r][c] && (matrix[r][c].v === "" || matrix[r][c].v === null)) {
+            matrix[r][c].v = "";
+            matrix[r][c].bold = topBold;
+          }
+        }
+      }
+    }
+    return matrix;
+  }
+
+  function deleteColsFromMatrix(matrix, colIndicesDesc) {
+    const sorted = [...colIndicesDesc].sort((a, b) => b - a);
+    for (const row of matrix) {
+      for (const cIdx of sorted) {
+        if (cIdx < row.length) {
+          row.splice(cIdx, 1);
+        }
+      }
+    }
+  }
+
+  function matrixToSheet(matrix, addFilter = true, moneyColIndices = []) {
+    const aoa = matrix.map((r, rIdx) => r.map((cell, cIdx) => {
+      let val = cell && cell.v !== undefined ? cell.v : "";
+      if (rIdx >= 1 && moneyColIndices.includes(cIdx) && val !== "" && val !== null) {
+        const num = parseNum(val);
+        if (!isNaN(num) && String(val).trim() !== "") {
+          return num;
+        }
+      }
+      return val;
+    }));
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    if (moneyColIndices.length > 0 && aoa.length > 1) {
+      for (let r = 1; r < aoa.length; r++) {
+        for (const cIdx of moneyColIndices) {
+          const addr = XLSX.utils.encode_cell({ r, c: cIdx });
+          if (ws[addr] && typeof ws[addr].v === "number") {
+            ws[addr].t = "n";
+            ws[addr].z = "#,##0";
+          }
+        }
+      }
+    }
+
+    if (addFilter && aoa.length > 0 && aoa[0].length > 0) {
+      const lastCol = XLSX.utils.encode_col(aoa[0].length - 1);
+      ws["!autofilter"] = { ref: `A1:${lastCol}${aoa.length}` };
+    }
+
+    const colWidths = [];
+    for (let r = 0; r < aoa.length; r++) {
+      for (let c = 0; c < aoa[r].length; c++) {
+        const len = String(aoa[r][c] || "").length;
+        colWidths[c] = Math.min(48, Math.max(colWidths[c] || 10, len + 4));
+      }
+    }
+    ws["!cols"] = colWidths.map(w => ({ wch: w }));
+    return ws;
+  }
+
+  function detectMoneyCols(headerRow, fallbackCols = []) {
+    const detected = new Set(fallbackCols);
+    if (headerRow && headerRow.length) {
+      headerRow.forEach((cell, idx) => {
+        const h = cleanText(cell ? cell.v : "").toLowerCase();
+        if (h.includes("số tiền") || h.includes("so tien") || h.includes("thành tiền") || h.includes("giá trị")) {
+          detected.add(idx);
+        }
+      });
+    }
+    return Array.from(detected);
+  }
+
+  // CÔNG CỤ 2: Xử lý file tra cứu chứng từ (hỗ trợ nhiều file)
+  function runMacroTraCuu(wb, originalFileName) {
+    const firstSheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[firstSheetName];
+    const matrix = sheetToMatrixWithBold(ws);
+
+    const idxX = colToIdx("X");
+    for (const row of matrix) {
+      if (row[idxX] && row[idxX].v !== "") {
+        row[idxX].v = String(row[idxX].v).replace(/\./g, "");
+      }
+    }
+
+    const colsToDelete = [
+      colToIdx("AA"), colToIdx("Z"), colToIdx("Y"),
+      colToIdx("V"), colToIdx("U"),
+      colToIdx("L"), colToIdx("I"), colToIdx("F"),
+      colToIdx("B"), colToIdx("A")
+    ];
+    deleteColsFromMatrix(matrix, colsToDelete);
+
+    if (matrix.length > 9) matrix.splice(9, 1);
+    if (matrix.length >= 8) matrix.splice(0, 8);
+    else matrix.splice(0, matrix.length);
+
+    for (let i = matrix.length - 1; i >= 1; i--) {
+      const valA = matrix[i][0] ? String(matrix[i][0].v || "").trim() : "";
+      if (valA === "") matrix.splice(i, 1);
+    }
+
+    if (matrix.length > 1) {
+      const hasDataRow2 = matrix[1].some(c => c && String(c.v || "").trim() !== "");
+      if (hasDataRow2) matrix.splice(1, 1);
+    }
+
+    let sheetOutName = "C302";
+    const upperName = (originalFileName || "").toUpperCase();
+    if (upperName.includes("C301")) sheetOutName = "C301";
+    else if (upperName.includes("C205A")) sheetOutName = "C205a";
+    else if (upperName.includes("DC") || upperName.includes("DIEU CHINH") || upperName.includes("ĐIỀU CHỈNH")) sheetOutName = "DC";
+
+    const moneyCols = detectMoneyCols(matrix[0], [colToIdx("O")]);
+
+    const outWb = XLSX.utils.book_new();
+    const outWs = matrixToSheet(matrix, true, moneyCols);
+    XLSX.utils.book_append_sheet(outWb, outWs, sheetOutName);
+    return { wb: outWb, matrix, sheetName: sheetOutName, rowCount: matrix.length };
+  }
+
+  // CÔNG CỤ 1: Xử lý liệt kê ĐTKB
+  function runMacroDTKB(wb) {
+    const firstSheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[firstSheetName];
+    const matrix = sheetToMatrixWithBold(ws);
+
+    const idxX = colToIdx("X");
+    for (const row of matrix) {
+      if (row[idxX] && row[idxX].v !== "") {
+        row[idxX].v = String(row[idxX].v).replace(/\./g, "");
+      }
+    }
+
+    const colsToDelete = [
+      colToIdx("Z"), colToIdx("W"), colToIdx("Q"),
+      colToIdx("O"), colToIdx("N"), colToIdx("K"),
+      colToIdx("F"), colToIdx("C"), colToIdx("A")
+    ];
+    deleteColsFromMatrix(matrix, colsToDelete);
+
+    if (matrix.length > 9) matrix.splice(9, 1);
+    if (matrix.length >= 8) matrix.splice(0, 8);
+    else matrix.splice(0, matrix.length);
+
+    for (let i = matrix.length - 1; i >= 1; i--) {
+      const valA = matrix[i][0] ? String(matrix[i][0].v || "").trim() : "";
+      if (valA === "") matrix.splice(i, 1);
+    }
+
+    for (let r = 0; r < matrix.length; r++) {
+      const row = matrix[r];
+      while (row.length < 10) row.push({ v: "", bold: false });
+      const rawJ = String(row[9].v !== undefined ? row[9].v : "");
+      const parts = rawJ.split(".");
+      const inserted = [];
+      for (let k = 0; k < 11; k++) {
+        inserted.push({ v: "", bold: false });
+      }
+      row.splice(10, 0, ...inserted);
+
+      for (let p = 0; p < parts.length && (9 + p) < row.length; p++) {
+        row[9 + p] = { v: parts[p], bold: row[9].bold };
+      }
+      if (r === 0 && row[9]) {
+        row[9].v = "";
+      }
+    }
+
+    const headerRow = matrix[0] ? matrix[0].map(c => ({ v: c.v, bold: c.bold })) : [];
+    const codes = ["C301", "C302", "C205a"];
+    const extractedSheets = { C301: [], C302: [], C205a: [] };
+    const cutRowIndices = new Set();
+
+    for (const code of codes) {
+      let startIdx = -1;
+      for (let i = 1; i < matrix.length; i++) {
+        if (cutRowIndices.has(i)) continue;
+        const valA = String(matrix[i][0] ? matrix[i][0].v : "");
+        if (valA.toLowerCase().includes(code.toLowerCase())) {
+          startIdx = i;
+          break;
+        }
+      }
+      if (startIdx > 0) {
+        let endIdx = startIdx;
+        for (let i = startIdx + 1; i < matrix.length; i++) {
+          if (cutRowIndices.has(i)) break;
+          const valA = String(matrix[i][0] ? matrix[i][0].v : "").trim();
+          const isBold = matrix[i][0] ? matrix[i][0].bold : false;
+          const isGroupMarker = /^(C301|C302|C205a|ĐIỀU CHỈNH|DIEU CHINH)/i.test(valA);
+          if ((isBold || isGroupMarker) && valA !== "") {
+            endIdx = i - 1;
+            break;
+          } else {
+            endIdx = i;
+          }
+        }
+
+        const sheetRows = [headerRow.map(c => ({ ...c }))];
+        for (let i = startIdx; i <= endIdx; i++) {
+          sheetRows.push(matrix[i].map(c => ({ ...c })));
+          cutRowIndices.add(i);
+        }
+        if (sheetRows.length > 1) {
+          const hasDataRow2 = sheetRows[1].some(c => c && String(c.v || "").trim() !== "");
+          if (hasDataRow2) sheetRows.splice(1, 1);
+        }
+        extractedSheets[code] = sheetRows;
+      } else {
+        extractedSheets[code] = [headerRow.map(c => ({ ...c }))];
+      }
+    }
+
+    const dcRows = [headerRow.map(c => ({ ...c }))];
+    for (let i = 1; i < matrix.length; i++) {
+      if (cutRowIndices.has(i)) continue;
+      const valA = String(matrix[i][0] ? matrix[i][0].v : "").trim();
+      if (valA !== "") {
+        dcRows.push(matrix[i].map(c => ({ ...c })));
+      }
+    }
+    if (dcRows.length > 1) {
+      const hasDataRow2 = dcRows[1].some(c => c && String(c.v || "").trim() !== "");
+      if (hasDataRow2) dcRows.splice(1, 1);
+    }
+
+    const moneyCols = detectMoneyCols(headerRow, [colToIdx("AA")]);
+
+    const outWb = XLSX.utils.book_new();
+    for (const name of ["C301", "C302", "C205a"]) {
+      XLSX.utils.book_append_sheet(outWb, matrixToSheet(extractedSheets[name], true, moneyCols), name);
+    }
+    XLSX.utils.book_append_sheet(outWb, matrixToSheet(dcRows, true, moneyCols), "DC");
+
+    return {
+      wb: outWb,
+      sheetsData: {
+        C301: extractedSheets.C301,
+        C302: extractedSheets.C302,
+        C205a: extractedSheets.C205a,
+        DC: dcRows
+      },
+      moneyCols,
+      stats: {
+        C301: extractedSheets.C301.length - 1,
+        C302: extractedSheets.C302.length - 1,
+        C205a: extractedSheets.C205a.length - 1,
+        DC: dcRows.length - 1
+      }
+    };
+  }
+
+  let lastDTKBResult = null;
+
+  function updateEnrichButtons() {
+    const ready = Boolean(lastDTKBResult && processedTraCuuWorkbooks.length > 0);
+    document.getElementById("btnEnrichAndDownload").disabled = !ready;
+    document.getElementById("btnEnrichAndLoadTab1").disabled = !ready;
+  }
+
+  document.getElementById("btnProcDTKB").addEventListener("click", () => {
+    const file = document.getElementById("rawFileDTKB").files[0];
+    if (!file) { alert("Vui lòng chọn file thô Liệt kê ĐTKB trước."); return; }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const wb = XLSX.read(new Uint8Array(evt.target.result), { type: "array", cellStyles: true });
+      const res = runMacroDTKB(wb);
+      lastDTKBResult = res;
+      processedWbDTKB = res.wb;
+      const outName = `DTKB_DaXuLy_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(res.wb, outName);
+      document.getElementById("btnLoadDTKBToTab1").disabled = false;
+      updateEnrichButtons();
+      document.getElementById("logDTKB").innerHTML =
+        `<strong>Xong phim! Đã xử lý file Liệt kê ĐTKB (định dạng #,##0 cột số tiền):</strong><br>` +
+        `Đã tải về <code>${outName}</code>:<br>` +
+        `• Sheet <strong>C301</strong>: ${Math.max(0, res.stats.C301)} dòng | ` +
+        `<strong>C302</strong>: ${Math.max(0, res.stats.C302)} dòng | ` +
+        `<strong>C205a</strong>: ${Math.max(0, res.stats.C205a)} dòng | ` +
+        `<strong>DC</strong>: ${Math.max(0, res.stats.DC)} dòng`;
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  document.getElementById("btnLoadDTKBToTab1").addEventListener("click", () => {
+    if (!processedWbDTKB) return;
+    loadedWorkbook = processedWbDTKB;
+    switchTab("analysis");
+    document.getElementById("statusText").textContent =
+      `Đã nạp từ Công cụ 1 (Sheets: ${loadedWorkbook.SheetNames.join(", ")}) — Bấm "Chạy phân tích"!`;
+  });
+
+  document.getElementById("btnProcTraCuu").addEventListener("click", async () => {
+    const files = Array.from(document.getElementById("rawFilesTraCuu").files || []);
+    if (!files.length) { alert("Vui lòng chọn ít nhất 1 file tra cứu chứng từ."); return; }
+
+    processedTraCuuWorkbooks = [];
+    const logLines = [];
+
+    for (const file of files) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellStyles: true });
+      const res = runMacroTraCuu(wb, file.name);
+      processedTraCuuWorkbooks.push({ name: file.name, ...res });
+
+      const baseName = file.name.replace(/\.[^/.]+$/, "");
+      const outName = `${baseName}_DaXuLy.xlsx`;
+      XLSX.writeFile(res.wb, outName);
+      logLines.push(`• <code>${escHtml(file.name)}</code> → <code>${escHtml(outName)}</code> (Sheet <strong>${res.sheetName}</strong>: ${Math.max(0, res.rowCount - 1)} dòng)`);
+    }
+
+    saveTraCuuToStorage();
+    updateEnrichButtons();
+    document.getElementById("logTraCuu").innerHTML =
+      `<strong>Đã xử lý xong ${files.length} file tra cứu chứng từ:</strong><br>` + logLines.join("<br>");
+  });
+
+  // ==================== LƯU TRỮ & BỔ SUNG CỘT I CHO LIỆT KÊ ĐTKB ====================
+  const STORAGE_KEY_TRACUU = "KBNN_TRACUU_LOOKUP_V1";
+
+  function saveTraCuuToStorage() {
+    try {
+      const compact = processedTraCuuWorkbooks.map(item => ({
+        name: item.name,
+        sheetName: item.sheetName,
+        rows: (item.matrix || []).slice(1).map(r => r.map(c => c ? c.v : ""))
+      }));
+      localStorage.setItem(STORAGE_KEY_TRACUU, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        items: compact
+      }));
+    } catch (e) {}
+  }
+
+  function loadTraCuuFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_TRACUU);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+        processedTraCuuWorkbooks = parsed.items.map(it => ({
+          name: it.name,
+          sheetName: it.sheetName,
+          matrix: [
+            [],
+            ...(it.rows || []).map(r => r.map(v => ({ v, bold: false })))
+          ]
+        }));
+        const names = parsed.items.map(x => x.name).join(", ");
+        document.getElementById("logTraCuu").innerHTML =
+          `Đã khôi phục <strong>${parsed.items.length}</strong> file tra cứu chứng từ đã lưu trước đó: <code>${escHtml(names)}</code>.`;
+        updateEnrichButtons();
+      }
+    } catch (e) {}
+  }
+
+  function buildTraCuuLookupBySheet() {
+    const bySheet = {
+      C301: new Map(),
+      C302: new Map(),
+      C205a: new Map(),
+      DC: new Map()
+    };
+    const allMap = new Map();
+
+    const idxG = colToIdx("G");
+    const idxJ = colToIdx("J");
+
+    for (const item of processedTraCuuWorkbooks) {
+      const m = item.matrix;
+      if (!m || m.length < 2) continue;
+      const sKey = bySheet[item.sheetName] ? item.sheetName : null;
+
+      for (let r = 1; r < m.length; r++) {
+        const row = m[r];
+        const keyG = cleanText(row[idxG] ? row[idxG].v : "").toLowerCase();
+        const valJ = row[idxJ] ? row[idxJ].v : "";
+        if (keyG && cleanText(valJ) !== "") {
+          if (sKey && !bySheet[sKey].has(keyG)) {
+            bySheet[sKey].set(keyG, valJ);
+          }
+          if (!allMap.has(keyG)) {
+            allMap.set(keyG, valJ);
+          }
+        }
+      }
+    }
+    return { bySheet, allMap };
+  }
+
+  function enrichDTKBWithTraCuu() {
+    if (!lastDTKBResult || !processedTraCuuWorkbooks.length) return null;
+    const { bySheet, allMap } = buildTraCuuLookupBySheet();
+
+    const idxC_dtkb = colToIdx("C");
+    const idxI_dtkb = colToIdx("I");
+
+    let filledICount = 0;
+    let emptyIFoundCount = 0;
+
+    const newWb = XLSX.utils.book_new();
+    const sheetNames = ["C301", "C302", "C205a", "DC"];
+
+    for (const sName of sheetNames) {
+      const origMatrix = lastDTKBResult.sheetsData[sName] || [];
+      const cloned = origMatrix.map(r => r.map(c => ({ v: c.v, bold: c.bold })));
+      const targetMap = (bySheet[sName] && bySheet[sName].size > 0) ? bySheet[sName] : allMap;
+
+      if (cloned.length > 1 && (sName === "C301" || sName === "C302")) {
+        for (let r = 1; r < cloned.length; r++) {
+          const row = cloned[r];
+          while (row.length <= idxI_dtkb) {
+            row.push({ v: "", bold: false });
+          }
+          const curI = cleanText(row[idxI_dtkb] ? row[idxI_dtkb].v : "");
+          if (curI === "") {
+            emptyIFoundCount++;
+            const keyC = cleanText(row[idxC_dtkb] ? row[idxC_dtkb].v : "").toLowerCase();
+            if (keyC && targetMap.has(keyC)) {
+              row[idxI_dtkb].v = targetMap.get(keyC);
+              filledICount++;
+            }
+          }
+        }
+      }
+
+      lastDTKBResult.sheetsData[sName] = cloned.map(r => r.map(c => ({ v: c.v, bold: c.bold })));
+      XLSX.utils.book_append_sheet(newWb, matrixToSheet(cloned, true, lastDTKBResult.moneyCols), sName);
+    }
+
+    return {
+      wb: newWb,
+      filledICount,
+      emptyIFoundCount,
+      c301Dict: bySheet.C301.size,
+      c302Dict: bySheet.C302.size
+    };
+  }
+
+  document.getElementById("btnEnrichAndDownload").addEventListener("click", () => {
+    const res = enrichDTKBWithTraCuu();
+    if (!res) return;
+    processedWbDTKB = res.wb;
+    const outName = `DTKB_BoSungCotI_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(res.wb, outName);
+    document.getElementById("logEnrich").innerHTML =
+      `<strong>Hoàn tất bổ sung thông tin vào file Liệt kê ĐTKB (4 sheet: C301, C302, C205a, DC)!</strong><br>` +
+      `• Từ điển đối chiếu tương ứng: sheet <strong>C301</strong> (${res.c301Dict} mã), sheet <strong>C302</strong> (${res.c302Dict} mã) — khớp <strong>Cột C (liệt kê) ↔ Cột G (tra cứu) → lấy Cột J (tra cứu) → điền Cột I (liệt kê)</strong>.<br>` +
+      `• Tại C301 &amp; C302 phát hiện <strong>${res.emptyIFoundCount}</strong> ô trống tại Cột I, đã bổ sung thành công <strong>${res.filledICount}</strong> ô và xuất file <code>${outName}</code>.`;
+  });
+
+  document.getElementById("btnEnrichAndLoadTab1").addEventListener("click", () => {
+    const res = enrichDTKBWithTraCuu();
+    if (!res) return;
+    processedWbDTKB = res.wb;
+    loadedWorkbook = res.wb;
+    switchTab("analysis");
+    document.getElementById("statusText").textContent =
+      `Đã nạp file ĐTKB bổ sung Cột I (điền ${res.filledICount}/${res.emptyIFoundCount} ô trống ở C301 & C302) — Bấm "Chạy phân tích"!`;
+  });
+
+  document.getElementById("btnClearTraCuuCache").addEventListener("click", () => {
+    processedTraCuuWorkbooks = [];
+    localStorage.removeItem(STORAGE_KEY_TRACUU);
+    updateEnrichButtons();
+    document.getElementById("logTraCuu").textContent = "Đã xóa bộ nhớ dữ liệu tra cứu chứng từ.";
+    document.getElementById("logEnrich").textContent = "Đã xóa bộ nhớ dữ liệu tra cứu chứng từ.";
+  });
+
+  loadTraCuuFromStorage();
+
+  // ==================== TAB 1: PHÂN TÍCH DƯ TẠM ỨNG ====================
+  document.getElementById("fileInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      loadedWorkbook = XLSX.read(data, { type: "array", cellDates: true });
+      document.getElementById("statusText").textContent =
+        `Đã tải: ${file.name} (Sheets: ${loadedWorkbook.SheetNames.join(", ")})`;
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  function getSheetRows(wb, sheetName, startRow) {
+    const realName = wb.SheetNames.find(n => n.trim().toLowerCase() === sheetName.toLowerCase());
+    if (!realName) return [];
+    const ws = wb.Sheets[realName];
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
+    return aoa.slice(Math.max(0, startRow - 1));
+  }
+
+  function buildKey(fields, flags) {
+    const parts = [];
+    if (flags.G) parts.push("G:" + fields.G.toLowerCase());
+    if (flags.I) parts.push("I:" + fields.I.toLowerCase());
+    if (flags.X) parts.push("X:" + fields.X.toLowerCase());
+    if (flags.L) parts.push("L:" + fields.L.toLowerCase());
+    if (flags.T) parts.push("T:" + fields.T.toLowerCase());
+    return parts.join("||") || "ALL";
+  }
+
+  function matchKeyword(loaiRaw, kwRaw, caseSensitive) {
+    const kw = (kwRaw || "").trim();
+    if (!kw) return true;
+    if (caseSensitive) return String(loaiRaw || "").includes(kw);
+    return String(loaiRaw || "").toLowerCase().includes(kw.toLowerCase());
+  }
+
+  document.getElementById("btnRun").addEventListener("click", () => {
+    if (!loadedWorkbook) {
+      alert("Vui lòng chọn file Excel (hoặc nạp từ Tab Công cụ) trước.");
+      return;
+    }
+    const startRow = Math.max(1, parseInt(document.getElementById("startRow").value, 10) || 2);
+    const refDate = parseDateVal(document.getElementById("refDate").value) || new Date();
+    const dateColIdx = colToIdx("F");
+    const advKw = document.getElementById("advKeyword").value || "Tạm ứng";
+    const caseSensitive = document.getElementById("caseSensitiveKw").checked;
+    const viewMode = document.getElementById("viewMode").value;
+    const mode9251Group = document.getElementById("mode9251Group").checked;
+
+    const flags = {
+      G: document.getElementById("k_G").checked,
+      I: document.getElementById("k_I").checked,
+      X: document.getElementById("k_X").checked,
+      L: document.getElementById("k_L").checked,
+      T: document.getElementById("k_T").checked,
+    };
+
+    const rows301 = getSheetRows(loadedWorkbook, "C301", startRow);
+    const rows302 = getSheetRows(loadedWorkbook, "C302", startRow);
+    const rows205a = getSheetRows(loadedWorkbook, "C205a", startRow);
+
+    const idxG = colToIdx("G"), idxH = colToIdx("H"), idxI = colToIdx("I");
+    const idxL = colToIdx("L"), idxT = colToIdx("T"), idxX = colToIdx("X");
+    const idxY = colToIdx("Y"), idxAA = colToIdx("AA");
+
+    const groups = new Map();
+
+    function extractFields(r) {
+      return {
+        G: cleanText(r[idxG]),
+        H: cleanText(r[idxH]),
+        I: cleanText(r[idxI]),
+        X: cleanText(r[idxX]),
+        L: cleanText(r[idxL]),
+        T: cleanText(r[idxT]),
+        Y: cleanText(r[idxY]),
+        AA: parseNum(r[idxAA]),
+        date: parseDateVal(r[dateColIdx]) || refDate
+      };
+    }
+
+    function ensureGroup(key, f) {
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          maDuAn: f.G,
+          tenDuAn: f.H,
+          hangMucTietMuc: f.I,
+          namKHV: f.X,
+          maNDKT: f.L,
+          nguonVon: f.T,
+          advItems: [],
+          tongTamUng: 0,
+          tongThuHoi: 0,
+          tongNopTra: 0
+        });
+      } else {
+        const g = groups.get(key);
+        if (!g.tenDuAn && f.H) g.tenDuAn = f.H;
+        if (!g.hangMucTietMuc && f.I) g.hangMucTietMuc = f.I;
+      }
+      return groups.get(key);
+    }
+
+    for (const r of rows301) {
+      const f = extractFields(r);
+      if (!f.G && !f.H && !f.I && f.AA === 0) continue;
+      if (matchKeyword(f.Y, advKw, caseSensitive) && f.AA !== 0) {
+        const k = buildKey(f, flags);
+        const g = ensureGroup(k, f);
+        g.advItems.push({ date: f.date, amount: f.AA });
+        g.tongTamUng += f.AA;
+      }
+    }
+
+    function applyClearRows(rows, isThuHoi) {
+      for (const r of rows) {
+        const f = extractFields(r);
+        const absAmt = Math.abs(f.AA);
+        if (absAmt === 0) continue;
+        const k = buildKey(f, flags);
+        const g = ensureGroup(k, f);
+        if (isThuHoi) g.tongThuHoi += absAmt;
+        else g.tongNopTra += absAmt;
+      }
+    }
+
+    applyClearRows(rows302, true);
+    applyClearRows(rows205a, false);
+
+    const rowsOut = [];
+    let totAll = 0, totU3 = 0, tot3_6 = 0, tot6_9 = 0, totO9 = 0;
+
+    for (const g of groups.values()) {
+      g.advItems.sort((a, b) => a.date - b.date);
+      const totalClear = g.tongThuHoi + g.tongNopTra;
+      let cleared = totalClear;
+      const is9251 = g.maNDKT === "9251";
+
+      if (viewMode === "item" && !(is9251 && mode9251Group)) {
+        for (const item of g.advItems) {
+          let rem = item.amount;
+          let usedClear = 0;
+          if (cleared > 0) {
+            usedClear = Math.min(rem, cleared);
+            rem -= usedClear;
+            cleared -= usedClear;
+          }
+          const m = rem > 0.0001 ? monthsDiff(item.date, refDate) : 0;
+          const u3 = rem > 0.0001 && m < 3 ? rem : 0;
+          const m3_6 = rem > 0.0001 && m >= 3 && m < 6 ? rem : 0;
+          const m6_9 = rem > 0.0001 && m >= 6 && m < 9 ? rem : 0;
+          const o9 = rem > 0.0001 && m >= 9 ? rem : 0;
+
+          if (item.amount > 0 || rem > 0) {
+            totAll += rem;
+            totU3 += u3;
+            tot3_6 += m3_6;
+            tot6_9 += m6_9;
+            totO9 += o9;
+
+            rowsOut.push({
+              maDuAn: g.maDuAn,
+              tenDuAn: g.tenDuAn,
+              hangMucTietMuc: g.hangMucTietMuc,
+              namKHV: g.namKHV,
+              maNDKT: g.maNDKT,
+              nguonVon: g.nguonVon,
+              ngayBatDau: item.date,
+              ngayBatDauStr: fmtDateVN(item.date),
+              tongTamUng: item.amount,
+              tongClear: usedClear,
+              duChuaThuHoi: rem,
+              u3, m3_6, m6_9, o9,
+              months: rem > 0.0001 ? Number(m.toFixed(1)) : 0,
+              note: is9251 ? "NDKT 9251: kiểm tra ngày hoàn" : ""
+            });
+          }
+        }
+      } else {
+        let u3 = 0, m3_6 = 0, m6_9 = 0, o9 = 0;
+        let maxMonths = 0;
+        let duChuaThuHoi = 0;
+        let startAdvDate = null;
+
+        for (const item of g.advItems) {
+          let rem = item.amount;
+          if (cleared > 0) {
+            const used = Math.min(rem, cleared);
+            rem -= used;
+            cleared -= used;
+          }
+          if (rem > 0.0001) {
+            duChuaThuHoi += rem;
+            if (!startAdvDate || item.date < startAdvDate) startAdvDate = item.date;
+            const m = monthsDiff(item.date, refDate);
+            if (m > maxMonths) maxMonths = m;
+            if (m < 3) u3 += rem;
+            else if (m < 6) m3_6 += rem;
+            else if (m < 9) m6_9 += rem;
+            else o9 += rem;
+          }
+        }
+        if (!startAdvDate && g.advItems.length > 0) startAdvDate = g.advItems[0].date;
+
+        if (g.tongTamUng > 0 || duChuaThuHoi > 0) {
+          totAll += duChuaThuHoi;
+          totU3 += u3;
+          tot3_6 += m3_6;
+          tot6_9 += m6_9;
+          totO9 += o9;
+
+          rowsOut.push({
+            maDuAn: g.maDuAn,
+            tenDuAn: g.tenDuAn,
+            hangMucTietMuc: g.hangMucTietMuc,
+            namKHV: g.namKHV,
+            maNDKT: g.maNDKT,
+            nguonVon: g.nguonVon,
+            ngayBatDau: startAdvDate,
+            ngayBatDauStr: fmtDateVN(startAdvDate),
+            tongTamUng: g.tongTamUng,
+            tongClear: totalClear,
+            duChuaThuHoi,
+            u3, m3_6, m6_9, o9,
+            months: Number(maxMonths.toFixed(1)),
+            note: is9251 ? "NDKT 9251: gộp nhóm, rà soát ngày hoàn" : ""
+          });
+        }
+      }
+    }
+
+    rowsOut.sort((a, b) =>
+      a.maDuAn.localeCompare(b.maDuAn, "vi", { numeric: true }) ||
+      a.hangMucTietMuc.localeCompare(b.hangMucTietMuc, "vi", { numeric: true }) ||
+      a.namKHV.localeCompare(b.namKHV, "vi", { numeric: true }) ||
+      a.maNDKT.localeCompare(b.maNDKT, "vi", { numeric: true }) ||
+      ((a.ngayBatDau ? a.ngayBatDau.getTime() : 0) - (b.ngayBatDau ? b.ngayBatDau.getTime() : 0))
+    );
+
+    lastResultRows = rowsOut;
+
+    document.getElementById("sumAll").textContent = fmtMoney(totAll);
+    document.getElementById("sumUnder3").textContent = fmtMoney(totU3);
+    document.getElementById("sum3to6").textContent = fmtMoney(tot3_6);
+    document.getElementById("sum6to9").textContent = fmtMoney(tot6_9);
+    document.getElementById("sumOver9").textContent = fmtMoney(totO9);
+    document.getElementById("summaryCards").style.display = "grid";
+    document.getElementById("resultCard").style.display = "block";
+    document.getElementById("btnExport").disabled = rowsOut.length === 0;
+    document.getElementById("statusText").textContent = `Hoàn tất: ${rowsOut.length} dòng.`;
+
+    applyFiltersAndRender();
+  });
+
+  function getFilteredRows() {
+    const fHmTm = cleanText(document.getElementById("fltHmTm").value).toLowerCase();
+    const fNdkt = cleanText(document.getElementById("fltNdkt").value).toLowerCase();
+    const q = cleanText(document.getElementById("searchBox").value).toLowerCase();
+
+    return lastResultRows.filter(r => {
+      if (fHmTm) {
+        if (fHmTm === "trống" || fHmTm === "trong") {
+          if (r.hangMucTietMuc) return false;
+        } else if (!r.hangMucTietMuc.toLowerCase().includes(fHmTm)) {
+          return false;
+        }
+      }
+      if (fNdkt && !r.maNDKT.toLowerCase().includes(fNdkt)) {
+        return false;
+      }
+      if (q) {
+        const hit =
+          r.maDuAn.toLowerCase().includes(q) ||
+          r.tenDuAn.toLowerCase().includes(q) ||
+          r.hangMucTietMuc.toLowerCase().includes(q) ||
+          r.namKHV.toLowerCase().includes(q) ||
+          r.maNDKT.toLowerCase().includes(q) ||
+          r.ngayBatDauStr.toLowerCase().includes(q) ||
+          r.note.toLowerCase().includes(q);
+        if (!hit) return false;
+      }
+      return true;
+    });
+  }
+
+  function applyFiltersAndRender() {
+    const rows = getFilteredRows();
+    document.getElementById("filteredCount").textContent =
+      `Hiển thị ${rows.length} / ${lastResultRows.length} dòng`;
+
+    const tbody = document.querySelector("#resultTable tbody");
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="nowrap">${escHtml(r.maDuAn)}</td>
+        <td class="proj-name">${escHtml(r.tenDuAn)}</td>
+        <td class="hm-tm">${renderHmTm(r.hangMucTietMuc)}</td>
+        <td class="nowrap">${escHtml(r.namKHV)}</td>
+        <td class="nowrap">${escHtml(r.maNDKT)}</td>
+        <td class="nowrap">${escHtml(r.nguonVon)}</td>
+        <td class="nowrap">${escHtml(r.ngayBatDauStr)}</td>
+        <td class="num">${fmtMoney(r.tongTamUng)}</td>
+        <td class="num">${fmtMoney(r.tongClear)}</td>
+        <td class="num"><strong>${fmtMoney(r.duChuaThuHoi)}</strong></td>
+        <td class="num">${fmtMoney(r.u3)}</td>
+        <td class="num">${fmtMoney(r.m3_6)}</td>
+        <td class="num">${fmtMoney(r.m6_9)}</td>
+        <td class="num">${fmtMoney(r.o9)}</td>
+        <td class="num">${r.months}</td>
+        <td class="nowrap">${r.note ? `<span class="badge-9251">${escHtml(r.note)}</span>` : ""}</td>
+      </tr>
+    `).join("");
+  }
+
+  document.getElementById("fltHmTm").addEventListener("input", applyFiltersAndRender);
+  document.getElementById("fltNdkt").addEventListener("input", applyFiltersAndRender);
+  document.getElementById("searchBox").addEventListener("input", applyFiltersAndRender);
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    document.getElementById("fltHmTm").value = "";
+    document.getElementById("fltNdkt").value = "";
+    document.getElementById("searchBox").value = "";
+    applyFiltersAndRender();
+  });
+
+  document.getElementById("btnExport").addEventListener("click", () => {
+    const rows = getFilteredRows();
+    if (!rows.length) return;
+    const exportData = rows.map(r => ({
+      "Mã dự án (G)": r.maDuAn,
+      "Tên dự án (H)": r.tenDuAn,
+      "Hạng mục-Tiết mục (I)": r.hangMucTietMuc,
+      "Năm KHV (X)": r.namKHV,
+      "Mã NDKT (L)": r.maNDKT,
+      "Nguồn vốn (T)": r.nguonVon,
+      "Ngày bắt đầu tạm ứng": r.ngayBatDauStr,
+      "Tạm ứng C301": r.tongTamUng,
+      "Thu hồi + Nộp trả": r.tongClear,
+      "Dư tạm ứng chưa thu hồi": r.duChuaThuHoi,
+      "Dưới 3 tháng": r.u3,
+      "Từ 3 đến dưới 6 tháng": r.m3_6,
+      "Từ 6 đến dưới 9 tháng": r.m6_9,
+      "Từ 9 tháng trở lên": r.o9,
+      "Số tháng": r.months,
+      "Ghi chú": r.note
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let r = 1; r <= range.e.r; r++) {
+      for (let c = 7; c <= 13; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (ws[addr] && typeof ws[addr].v === "number") {
+          ws[addr].t = "n";
+          ws[addr].z = "#,##0";
+        }
+      }
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ChiTietTamUng");
+    XLSX.writeFile(wb, `PhanTich_TamUng_${document.getElementById("refDate").value}.xlsx`);
+  });
+</script>
+</body>
+</html>
